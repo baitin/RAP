@@ -1,9 +1,10 @@
 package com.taobao.rigel.rap.common.utils;
 import com.taobao.rigel.rap.project.bo.Action;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.Element;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 import java.io.IOException;
 
@@ -27,25 +28,10 @@ public class CacheUtils {
     public static final String KEY_STATISTICS = "KEY_STATISTICS";
     public static final String KEY_STATISTICS_OF_TEAM = "KEY_STATISTICS_OF_TEAM";
 
-    private static JedisPool jedisPool;
-    private static Jedis jedis;
-
+    private static CacheManager cacheManager = ((CacheManager)SpringContextHolder.getBean("cacheManager"));
+    private static final String SYS_CACHE = "sysCache";
     public CacheUtils() {}
 
-    private static Jedis getJedis() {
-        try {
-            jedisPool = JedisFactory.getInstance().getJedisPool();
-        } catch (IOException e) {
-            e.printStackTrace();
-            logger.error(e.getMessage());
-        }
-        jedis = jedisPool.getResource();
-        return jedis;
-    }
-
-    private static void returnJedis() {
-        jedisPool.returnResourceObject(jedis);
-    }
 
     /**
      * get cached Mock rule
@@ -84,21 +70,16 @@ public class CacheUtils {
         String[] cacheKey1 = new String[]{KEY_MOCK_RULE, new Integer(id).toString()};
         String[] cacheKey2 = new String[]{KEY_MOCK_DATA, new Integer(id).toString()};
 
-        getJedis();
+        remove(StringUtils.join(cacheKey1, "|"));
+        remove(StringUtils.join(cacheKey2, "|"));
 
-        jedis.del(StringUtils.join(cacheKey1, "|"));
-        jedis.del(StringUtils.join(cacheKey2, "|"));
-
-        returnJedis();
     }
 
     public static void put(String [] keys, String value, int expireInSecs) {
-        Jedis jedis = getJedis();
         String cacheKey = StringUtils.join(keys, "|");
-        jedis.set(cacheKey, value);
-        if (expireInSecs > 0)
-            jedis.expire(cacheKey, expireInSecs);
-        returnJedis();
+        put(cacheKey, value);
+//        if (expireInSecs > 0)
+//            jedis.expire(cacheKey, expireInSecs);
     }
 
     public static void put(String [] keys, String value) {
@@ -107,20 +88,94 @@ public class CacheUtils {
 
     public static String get(String []keys) {
 
-        String cache =  getJedis().get(StringUtils.join(keys, "|"));
-        returnJedis();
+        String cache = get(StringUtils.join(keys, "|")).toString();
         return cache;
     }
 
     public static void del(String[] keys) {
         String cacheKey = StringUtils.join(keys, "|");
-        getJedis().del(cacheKey);
-        returnJedis();
+        remove(cacheKey);
+    }
+
+    /**
+     * 获取SYS_CACHE缓存
+     * @param key
+     * @return
+     */
+    public static Object get(String key) {
+        return get(SYS_CACHE, key);
+    }
+
+    /**
+     * 写入SYS_CACHE缓存
+     * @param key
+     * @return
+     */
+    public static void put(String key, Object value) {
+        put(SYS_CACHE, key, value);
+    }
+
+    /**
+     * 从SYS_CACHE缓存中移除
+     * @param key
+     * @return
+     */
+    public static void remove(String key) {
+        remove(SYS_CACHE, key);
+    }
+
+
+    /**
+     * 获取缓存
+     * @param cacheName
+     * @param key
+     * @return
+     */
+    public static Object get(String cacheName, String key) {
+        Element element = getCache(cacheName).get(key);
+        return element==null?null:element.getObjectValue();
+    }
+
+    /**
+     * 写入缓存
+     * @param cacheName
+     * @param key
+     * @param value
+     */
+    public static void put(String cacheName, String key, Object value) {
+        Element element = new Element(key, value);
+        getCache(cacheName).put(element);
+    }
+
+    /**
+     * 从缓存中移除
+     * @param cacheName
+     * @param key
+     */
+    public static void remove(String cacheName, String key) {
+        getCache(cacheName).remove(key);
+    }
+
+    /**
+     * 获得一个Cache，没有则创建一个。
+     * @param cacheName
+     * @return
+     */
+    private static Cache getCache(String cacheName){
+        Cache cache = cacheManager.getCache(cacheName);
+        if (cache == null){
+            cacheManager.addCache(cacheName);
+            cache = cacheManager.getCache(cacheName);
+            cache.getCacheConfiguration().setEternal(true);
+        }
+        return cache;
+    }
+
+    public static CacheManager getCacheManager() {
+        return cacheManager;
     }
 
     public static void init() {
-        getJedis();
-        jedis.flushAll();
-        returnJedis();
+
     }
 }

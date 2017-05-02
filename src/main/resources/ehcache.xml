@@ -3,6 +3,8 @@
 
     <defaultCache maxElementsInMemory="10000" eternal="false" timeToIdleSeconds="120" timeToLiveSeconds="200" />
 
+    <cache name="sysCache" maxEntriesLocalHeap="100" eternal="true" overflowToDisk="true"/>
+
     <cache
             name="com.examples.domain.Country"
             maxElementsInMemory="10000"

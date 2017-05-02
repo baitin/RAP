@@ -3,8 +3,6 @@ package com.taobao.rigel.rap.common.listener;
 import com.taobao.rigel.rap.common.utils.CacheUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;

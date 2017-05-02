@@ -1,5 +1,4 @@
 import com.taobao.rigel.rap.common.utils.MockjsRunner;
-import redis.clients.jedis.Jedis;
 
 /**
  * Created by Bosn on 2014/8/16.
